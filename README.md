@@ -16,3 +16,5 @@ ARTS 活动：每周至少做一个 leetcode 的算法题，阅读并点评至�
 https://coolshell.cn/articles/12052.html  
 https://leetcode-cn.com  
 https://github.com/haoel/leetcode  
+
+用自己擅长的语言做算法题即可
