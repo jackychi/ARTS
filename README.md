@@ -9,3 +9,10 @@ ARTS 活动：每周至少做一个 leetcode 的算法题，阅读并点评至�
  - 英文技术文章地址和简要点评
  - 学习了什么新的技术技巧
  - 分享一篇有观点和思考的技术文章，长短都可
+
+
+关于 leetcode，可以参考：
+
+https://coolshell.cn/articles/12052.html
+https://leetcode-cn.com
+https://github.com/haoel/leetcode
