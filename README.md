@@ -13,6 +13,6 @@ ARTS 活动：每周至少做一个 leetcode 的算法题，阅读并点评至�
 
 关于 leetcode，可以参考：
 
-https://coolshell.cn/articles/12052.html
-https://leetcode-cn.com
-https://github.com/haoel/leetcode
+https://coolshell.cn/articles/12052.html  
+https://leetcode-cn.com  
+https://github.com/haoel/leetcode  
