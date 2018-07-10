@@ -14,7 +14,7 @@ int reverse(int x) {
     int rx = 0;
     int max = INT_MAX / 10;
     int min = INT_MIN / 10;
-    while (x != 0) { Zero returns zero.
+    while (x != 0) { // Zero returns zero.
         if (rx > max) { // rx * 10 will be great than INT_MAX, which causes overflow
             return 0;
         }
@@ -37,7 +37,22 @@ int reverse(int x) {
 
 
 
+## 知识点
 
+I have a basic understanding of 'Overflow', and there is another concept 'Underflow' I have never heard.
 
+### Overflow
 
+> The condition that occurs when a calculation produces a result that is greater in magnitude than that which a given register or storage location can store or represent.
+>
+> The C standard suggests: A computation involving unsigned operands can never overflow, because a result that cannot be represented by the resulting unsigned integer type is reduced modulo the number that is one greater than the largest value that can be represented by the resulting type.
+>
+> C 标准中：有符号整数会溢出，OF 置为 1，其结果是未定义行为。无符号整数不会溢出，做加法，超出表示范围，就会进位做减法；不够减，就会借位；此时，CF 置为 1。
 
+### Underflow
+
+> The condition in a computer program that can occur when the true result of a floating point operation is smaller in magnitude (that is, closer to zero) than the smallest value representable as a normal floating point number in the target datatype.
+>
+> 太小了而没法表示。
+>
+> float x = 1e-30; x /= 1e20; // Underflow!
