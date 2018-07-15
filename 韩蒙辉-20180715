@@ -1,0 +1,188 @@
+### ARTS
+
+本篇为ARTS第二篇
+
+Algorithm、Review、Technique、Share
+
+------
+
+#### Algorithm
+
+题目 200 [Number of Islands](https://leetcode.com/problems/number-of-islands/description/)
+
+Given a 2d grid map of `'1'`s (land) and `'0'`s (water), count the number of islands. An island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically. You may assume all four edges of the grid are all surrounded by water.
+
+```
+class Solution(object):
+    totleland = 0
+
+    def numIsLands(self, grid):
+        """
+        :type grid:List[List[str]]
+        :rtype:int
+        """
+        for i, iner in enumerate(grid):
+            for j, n in enumerate(iner):
+                if n:
+                    self.totleland += 1
+                    self.markZearo(grid, i, j);
+
+        return self.totleland
+
+    def markZearo(self, grid, i, j):
+        if i < len(grid) and j >= 0 and j < len((grid[i])) and grid[i][j] == 1:
+            grid[i][j] = 0
+            self.markZearo(grid, i + 1, j)
+            self.markZearo(grid, i, j + 1)
+            self.markZearo(grid, i, j - 1)
+```
+
+------
+
+
+
+#### Review
+
+文章：[Java Garbage Collection Distilled](https://mechanical-sympathy.blogspot.com/2013/07/java-garbage-collection-distilled.html)
+
+本周review 文章是一篇和GC相关的文章。GC，Garbage Collector 这是各种非手动控制内存语言中很重要的一块，也因此我们可以看到大量和此先关的文献论文。本文主要以Java中垃圾收集展开，在Java中Heap内存是垃圾收集器管理的主要区域。
+
+在Java 虚拟机规范中并没有对垃圾收集器如何实现做任何规定，也因此不同JVM虚拟机厂商，不同版本的虚拟中所提供的垃圾收集器也可能有很大差别。
+
+##### Heap Organisation in Hotspot
+
+弄清垃圾收集器是如何工作之前我们想要搞明白JVM中Heap内存是如果组织来帮助垃圾收集器更好的工作的。
+
+纵观所有垃圾收集器Heap内存布局，内存分代被证明为最优的提高内存分配和垃圾收集的一种布局形式，而现在众多的垃圾收集器也基本采用分代回收算法。“分代回收”是基于这样一个事实：对象的生命周期不同，所以针对不同生命周期的对象可以采取不同的回收方式，以便提高回收效率。
+
+在Java Heap还细分为Eden、Survivor 、Old以及Perm 四个年龄代，Perm 存储的是虚拟机加载的类信息，常量，静态变量。在Java 8中取消了Perm年龄代，主要原因是：Unfortunately the common use of class loading on an ongoing basis in many applications makes the motivating assumption behind the perm generation wrong, i.e. that classes are immortal. 这一句我没能完全理解，本文也不在对Perm做详细说明。
+
+###### **Object Allocation**
+
+![img](https://4.bp.blogspot.com/-7aT-vEsf1ck/UeV-q1u2qUI/AAAAAAAAAIs/9PK5-OpEL5I/s1600/Generations.png)
+
+
+
+1. Young/New Generation（新生代） 新生代又有Eden和两个Survivor代（From survivor，To survivor）三个部分组成，大部分对象创建时都会先分配在新生代，而大部分在此区域中对象的声明周期也很短。当Eden区满时，会进行一次垃圾回收(又称为Minor GC)，存活的对象会被复制到两个Survivor中的其中一个，当这个Survivor区也满时，此区中存活但不满足晋升的对象会被复制到另一个Survivor，而达到“晋升年龄阀”的对象会被放到Tenured(年老带)，这个过程也称为晋升
+
+2. Old Generation 老年代：新生代中经历了N次回收后仍然存活的对象会晋升到老年代，该区域中对象存活率高。老年代的回收称为Major GC。整堆包括新生代和老年代的垃圾回收称为Full GC（HotSpot VM里，除了CMS之外，其它能收集老年代的GC都会同时收集整个GC堆，包括新生代）。
+
+   ![img](http://dl.iteye.com/upload/attachment/0081/0878/930c3bab-e3e0-31e1-b012-2be1aa9cc9de.jpg)
+
+   
+
+虚拟机遇到一个new指令时，首先会根据这个new指令携带的类型参数看能否在常量池中定位到一个类的符号引用，并根据这个符号引用所代表的类是否已经被加载，解析和初始化过。如果没有则执行双亲委派的类加载过程。在类加载完成后便可确定对象所需要的堆内存大小。假设堆内存是规整的，已分配使用的在一边，未使用的在另一边，那内存分配仅仅是向空闲内存的一边移动一段和对象大小相等的距离。这种分配方式成为”指针碰撞“（Bump the Pointer）。如果堆内存不是规整的，则就需要维护一个表，记录那些是已使用的，那些是为分配的，这种分配方式成为”空闲列表“（Free list）。而Java堆是否规整则依赖于Java中垃圾收集器是否带有压缩整理功能（Compace）。因此对于Serial、ParNew，G1等带有Compace过程的垃圾收集器采用方法是指针碰撞，而CMS这种基于Mark-Sweep算法的则采用空闲列表。
+
+另一个需要考虑的问题是对象在堆上的分配非常频繁，即使是修改一个指针的位置在并发情况下也并不是线程安全的，解决这种问题有两种方案，一种是分配内存空间的动作进行同步处理—实际上虚拟机采用CAS配上失败重试的方式保证更新操作的原子性；另一种是把线程分配的动作按照线程划分在不同的空间之中进行，即每个线程中预先分配一小块内存，称为本地线程分配缓冲（Thread Local Allocation Buffer，TLAB).哪个线程要分配内存就在哪个线程的TLAB上分配。可以通过-XX:+/-UseTLAB参数来设定。
+
+##### Minor Collections
+
+当Eden区满时会触发一次minor collection。这一次GC会copy存活的对象到其中一个survivor 或者年老代。Copay到年老代成为晋升或者老年化（tenuring）。晋升针对那些足够老的对象(– XX:MaxTenuringThreshold=<n>)，或者Survivor space 溢出。
+
+在主流的商用程序语言（Java，C#）的主要实现汇总都是通过可达性分析来判定对象是否存活的。这个算法的基本思路是一系列的称为”GC Roots“的对象作为起始点，从这些起始点开始向下搜索，搜索所走过的路称为引用链（Reference Chain）,当一个对象到GC Roots 没有任何引用链相连的时候则证明对象是不可用的。
+
+在Java语言中，可欧威GC ROOTS的对象包含：
+
+1. 虚拟机栈(栈帧中的本地变量表)中引用的对象。
+2. 方法区中的类静态属性引用的对象。
+3. 方法区中常量引用的对象。
+4. 本地方法栈中JNI引用的对象。
+
+在分代收集中，新生代可到的GC根还包括老年代对新生代的引用。通过使用了card table，card table要记录的是从它覆盖的范围出发指向别的范围的指针。以分代式GC的card table为例，要记录old -> young的跨代指针，被标记的card是old gen范围内的。 
+
+##### Major Collections
+
+Major collection收集年老带中不在存活的对象，这也才能提供足够的空间来保证survivor空间中对象的晋升。众多不同的收集算法也大都是针对老年代来设计的。
+
+年老带GC收集器会预测垃圾收集的时期，以避免survivor到old的晋升失败。如果年老带中没有足够的空间来满足survivor的晋升则会触发”Full GC".
+
+为了避免晋升失败，可以调整填充空间（为晋升失败保留的buffer）），让老年代可以容纳晋升后的对象(‑XX:PromotedPadding=<n>)
+
+与FullGC相比，一次对老生代的压缩（compaction）可能是应用程序会经历的最长的暂停应用（stop-the-world）。压缩的时间和在老年代（tenured space）中存活对象的数量成线性增长关系。
+
+##### 垃圾收集算法
+
+###### 标记-清除算法 （Mark-Sweep）
+
+算法分为“标记和清除”
+
+1.首先标记处所有需要回收的对象（通过GC ROOTS，可达性分析算法）
+
+2.标记完成后统一回收。
+
+标记清除算法是最基本的收集算法，后续所有的收集算法都是基于这种思路并对其不足进行改进。
+
+不足：标记清除后产生大量的不连续的内存碎片，空间碎片太多导致以后需要为较大对象分配内存时，无法找到连续的内存空间而触发另一次的垃圾收集动作。
+
+###### 复制算法 （Copying）
+
+复制算法将内存划分为大小相等的两块，每次只使用其中的一块。当这一块内存使用完了，就就行标记，将存活的对象复制到另一块上面，然后在将使用过的内存一次性全部清理掉。
+
+这种算法的代价就是内存的使用缩小到了原来的一半。
+
+现在商业虚拟机都采用这种收集算法来回收新生代。新生代中98%对象是“朝生夕死的，所以无需按1：1的分配方法分配，而是将内存分为一个较大的Eden空间和两个较小的Survivor空间。每次使用Eden和其中的一个Survivor，将Eden和Survivor中还存活的对象一次性复制到另一个Survivor，同时清理掉Eden和刚才使用的Survivor。
+
+###### 标记-整理算法（Mark-Compact）
+
+标记整理算法和标记清理算法一样，但后续步骤不是对可清理对象进行清理而是让所有存活的对象向一端移动，让后直接清理掉边界以外的内存。
+
+
+
+##### 垃圾收集器
+
+###### Serial 收集器-XX:+UseSerialGC
+
+Serial是最基本、发展历史最悠久的收集器。这个收集器是一个单线程的收集器，它进行垃圾收集时必须暂停其它所有的工作线程，知道它收集结束。Serial 收集器对于运行在Client模式下的虚拟机来说是一个很好的选择。
+
+###### ParNew 收集器
+
+PareNews收集器是Serial收集器的多线程版本，除了使用多线程进行垃圾收集之外，其余行为包括Serial收集器可用的所有控制参数、收集算法、Stop The Word、对象分配规则、回收策略都与Serial完全一样。
+
+###### Parllel Scavenge 收集器
+
+它也是使用复制算法的收集器，又是并行线程的收集器。
+
+![Related image](https://i0.wp.com/www.techpaste.com/wp-content/uploads/2012/02/Stop-the-world-garbage-collection.jpg)
+
+######  CMS 收集器
+
+CMS(Concurrent Mark Sweep) 收集器是一种以获取最短回收停顿时间为目的的收集器。它的运作过程相对于前面几种更复杂一些：
+
+1. 初始标记(initial mark)，只标记GC ROOTS可直接关联到的对象，注意这里的“直接” ，所以这一步速度疾苦。这一步需要“Stop The Word” 
+2. 并发标记(concurrent mark) 这一步和应用程序并发执行，从第一步标记过可达对象进行Tracing，并对这些标记过的对像中引用属性的改变进行追踪，当这些标记的过得对象引用属性发生改变，则标记过dirty。 
+3. 重新标记(remark) 这一步是对上一步中发生改变的引用重新标记。这一步需要Stop The Word。 特别需要注意一点，这个阶段是以新生代中对象为根来判断对象是否存活的。
+4. 并发清楚(concurrent sweep)  清理未被引用的对象。 CMS(Concurrent Mark Sweep) 收集器是一种以获取最短回收停顿时间为目的的收集器。
+
+
+
+###### G1(Garge First)
+
+G1内存布局与其它收集器有很大不同，它将整个Java堆划为多个大小相等的独立区域（Region），虽然还保留有新生代和年老带概念，但新生代和年老带不再是物理隔绝了
+
+Global concurrent marking基于SATB形式的并发标记。它具体分为下面几个阶段： 
+
+1. **初始标记（initial marking）**：暂停阶段。扫描根集合，标记所有从根集合可直接到达的对象并将它们的字段压入扫描栈（marking stack）中等到后续扫描。G1使用外部的bitmap来记录mark信息，而不使用对象头的mark word里的mark bit。在分代式G1模式中，初始标记阶段借用young GC的暂停，因而没有额外的、单独的暂停阶段。  
+
+1. **并发标记（concurrent marking）**：并发阶段。不断从扫描栈取出引用递归扫描整个堆里的对象图。每扫描到一个对象就会对其标记，并将其字段压入扫描栈。重复扫描过程直到扫描栈清空。过程中还会扫描SATB write barrier所记录下的引用。  
+2. **最终标记（final marking，在实现中也叫remarking）**：暂停阶段。在完成并发标记后，每个Java线程还会有一些剩下的SATB write barrier记录的引用尚未处理。这个阶段就负责把剩下的引用处理完。同时这个阶段也进行弱引用处理（reference processing）。  注意这个暂停与CMS的remark有一个本质上的区别，那就是这个暂停只需要扫描SATB buffer，而CMS的remark需要重新扫描mod-union table里的dirty card外加整个根集合，而此时整个young gen（不管对象死活）都会被当作根集合的一部分，因而CMS remark有可能会非常慢。 
+3.  **清理（cleanup）**：暂停阶段。清点和重置标记状态。这个阶段有点像mark-sweep中的sweep阶段，不过不是在堆上sweep实际对象，而是在marking bitmap里统计每个region被标记为活的对象有多少。这个阶段如果发现完全没有活对象的region就会将其整体回收到可分配region列表中。 
+
+###### Reference
+
+http://hllvm.group.iteye.com/group/topic/44381
+
+https://www.cs.purdue.edu/homes/hosking/ismm2000/papers/printezis.pdf
+
+#### Technique
+
+###### Java VM Options You Should Always Use in Production
+
+http://blog.sokolenko.me/2014/11/javavm-options-production.html
+
+
+
+#### Share
+
+关于G1收集器
+
+http://presentations2015.s3.amazonaws.com/40_presentation.pdf
